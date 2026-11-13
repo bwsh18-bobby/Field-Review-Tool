@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#166534">
+<title>Pavement Review Projects</title>
+<style>
+:root { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+header { background: linear-gradient(135deg, #166534, #15803d); padding: calc(18px + env(safe-area-inset-top, 0px)) 18px 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+header h1 { font-size: 20px; font-weight: 700; color: #e0e7ff; }
+header p { font-size: 12px; color: #a7f3d0; margin-top: 3px; }
+main { max-width: 640px; margin: 0 auto; padding: 16px 14px calc(30px + env(safe-area-inset-bottom, 0px)); }
+#search { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: #e2e8f0; font-size: 15px; margin-bottom: 14px; outline: none; display: none; }
+#search::placeholder { color: #64748b; }
+.card { display: block; text-decoration: none; color: inherit; background: #1e293b; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; margin-bottom: 12px; transition: border-color 0.15s; }
+.card:active, .card:hover { border-color: rgba(110,231,183,0.5); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.city { font-size: 18px; font-weight: 700; color: #f1f5f9; }
+.go { color: #6ee7b7; font-size: 22px; flex-shrink: 0; }
+.facts { font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: rgba(255,255,255,0.07); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); }
+.prog { margin-top: 12px; }
+.bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.bar > div { height: 100%; background: #22c55e; width: 0; }
+.prog-l { font-size: 11px; color: #64748b; margin-top: 5px; }
+.note { font-size: 12px; color: #64748b; line-height: 1.6; margin-top: 18px; padding: 0 2px; }
+.empty { text-align: center; color: #64748b; padding: 40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛣️ Pavement Review Projects</h1>
+  <p id="sub"></p>
+</header>
+<main>
+  <input id="search" type="search" placeholder="Search projects" aria-label="Search projects">
+  <div id="list"></div>
+  <p class="note">Reviews are saved separately for each project, on this phone and in this browser. To back them up or move them to another device, open the project and use 📁 Data → Export JSON.</p>
+</main>
+<script>
+const PROJECTS = [{"city": "Cupertino", "file": "cupertino_pavement_review.html", "segments": 919, "storageKey": "cupertinoPvmt1", "zones": [], "years": [], "built": "2026-11-13"}, {"city": "Martinez", "file": "martinez_pavement_review.html", "segments": 970, "storageKey": "martinezPvmt1", "zones": ["Zone 1-Green", "Zone 2-Blue", "Zone 3-Red", "Zone 4-Orange", "Zone 5-Purple"], "years": ["2027", "2028", "2029", "2030", "2031"], "built": "2026-11-13"}];
+const esc = v => String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function reviewedOnDevice(key) {
+  try {
+    const d = JSON.parse(localStorage.getItem(key) || '{}');
+    return Object.values(d).filter(x => x && x.tx).length;
+  } catch (e) { return 0; }
+}
+function yearsLabel(ys) { return !ys || !ys.length ? '' : (ys.length === 1 ? ys[0] : ys[0] + '–' + ys[ys.length - 1]); }
+function render(q) {
+  q = (q || '').trim().toLowerCase();
+  const list = PROJECTS.filter(p => !q || p.city.toLowerCase().includes(q));
+  document.getElementById('list').innerHTML = list.length ? list.map(p => {
+    const n = reviewedOnDevice(p.storageKey), pct = p.segments ? Math.round(100 * n / p.segments) : 0;
+    const chips = [];
+    if (p.zones && p.zones.length) chips.push(p.zones.length + ' zones');
+    if (p.years && p.years.length) chips.push('Workplan ' + yearsLabel(p.years));
+    return `<a class="card" href="${encodeURI(p.file)}">
+      <div class="row"><div class="city">${esc(p.city)}</div><div class="go">›</div></div>
+      <div class="facts">${p.segments.toLocaleString()} street sections · map updated ${esc(p.built || '')}</div>
+      ${chips.length ? `<div class="chips">${chips.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>` : ''}
+      <div class="prog"><div class="bar"><div style="width:${n ? Math.max(pct, 1) : 0}%"></div></div>
+      <div class="prog-l">${n ? `${n.toLocaleString()} reviewed on this device (${n && pct === 0 ? '<1' : pct}%)` : 'No reviews on this device yet'}</div></div>
+    </a>`;
+  }).join('') : '<div class="empty">No matching projects</div>';
+}
+document.getElementById('sub').textContent = PROJECTS.length + ' project' + (PROJECTS.length === 1 ? '' : 's') + ' · tap one to open its map';
+if (PROJECTS.length > 5) { const s = document.getElementById('search'); s.style.display = 'block'; s.addEventListener('input', () => render(s.value)); }
+render('');
+// refresh progress when coming back from a map with the browser's Back button
+window.addEventListener('pageshow', () => render(document.getElementById('search').value));
+</script>
+</body>
+</html>
